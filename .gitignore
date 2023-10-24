@@ -1,0 +1,52 @@
+# IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# User-specific files
+.idea/workspace.xml
+.idea/tasks.xml
+.idea/dictionaries
+
+# User-specific workspace settings
+.idea/caches
+.idea/modules.xml
+.idea/vcs.xml
+
+# Sensitive or personal information
+.idea/webServers.xml
+.idea/dataSources.ids
+.idea/dataSources.xml
+
+# Gradle
+.idea/gradle.xml
+
+# Other
+.idea/codeStyles
+.idea/shelf
+.idea/editor.xml
+.idea/inspectionProfiles
+.idea/jslint.xml
+.idea/jshint.xml
+.idea/sass.xml
+.idea/typescript.xml
+.idea/www
+.idea/l10n
+
+# Logs
+.idea/history
+.idea/local
+
+# Comment these out if you're not using Gradle
+# .idea/gradle.xml
+# .idea/libraries
+# .idea/modules
+
+# Local artifacts
+*.xml
+*.txt
+*.jar
+*.class
+*.png
+*.zip

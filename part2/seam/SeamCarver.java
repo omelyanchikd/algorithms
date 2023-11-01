@@ -91,11 +91,9 @@ public class SeamCarver {
             }
         }
 
-        double checkEnergy = energies[W - 1][minJ];
         seam[W - 1] = minJ;
         for (int i = W - 2; i >= 0; i--) {
             seam[i] = edgeTo[i + 1][seam[i + 1]];
-            checkEnergy += energies[i][seam[i]];
         }
         return seam;
     }
@@ -144,11 +142,9 @@ public class SeamCarver {
             }
         }
 
-        double checkEnergy = energies[minI][H - 1];
         seam[H - 1] = minI;
         for (int j = H - 2; j >= 0; j--) {
             seam[j] = edgeTo[seam[j + 1]][j + 1];
-            checkEnergy += energies[seam[j]][j];
         }
         return seam;
     }
@@ -157,6 +153,7 @@ public class SeamCarver {
     public void removeHorizontalSeam(int[] seam) {
         if (!validSeam(seam, false)) throw new IllegalArgumentException("Seam is not valid");
         Picture updatedImage = new Picture(W, H - 1);
+        double[][] updatedEnergies = new double[W][H - 1];
         int updatedJ = 0;
         for (int i = 0; i < W; i++) {
             for (int j = 0; j < H; j++) {
@@ -164,16 +161,34 @@ public class SeamCarver {
                 updatedImage.set(i, updatedJ, image.get(i, j));
                 updatedJ += 1;
             }
+            if (seam[i] == 0) {
+                System.arraycopy(energies[i], 1, updatedEnergies[i], 0, H - 1);
+            }
+            else if (seam[i] == H - 1) {
+                System.arraycopy(energies[i], 0, updatedEnergies[i], 0, H - 1);
+            }
+            else {
+                System.arraycopy(energies[i], 0, updatedEnergies[i], 0, seam[i]);
+                System.arraycopy(energies[i], seam[i] + 1, updatedEnergies[i], seam[i],
+                                 H - seam[i] - 1);
+            }
             updatedJ = 0;
         }
         image = updatedImage;
+        energies = updatedEnergies;
         H -= 1;
+
+        for (int i = 0; i < W; i++) {
+            if (seam[i] > 0) energies[i][seam[i] - 1] = computeEnergies(i, seam[i] - 1);
+            if (seam[i] < H - 1) energies[i][seam[i]] = computeEnergies(i, seam[i]);
+        }
     }
 
     // remove vertical seam from current picture
     public void removeVerticalSeam(int[] seam) {
         if (!validSeam(seam, true)) throw new IllegalArgumentException("Seam is not valid");
         Picture updatedImage = new Picture(W - 1, H);
+        double[][] updatedEnergies = new double[W - 1][H];
         int updatedI = 0;
         for (int j = 0; j < H; j++) {
             for (int i = 0; i < W; i++) {
@@ -181,10 +196,30 @@ public class SeamCarver {
                 updatedImage.set(updatedI, j, image.get(i, j));
                 updatedI += 1;
             }
+            if (seam[j] == 0) {
+                for (int row = 0; row < W - 1; row++)
+                    updatedEnergies[row][j] = energies[row + 1][j];
+            }
+            else if (seam[j] == W - 1) {
+                for (int row = 0; row < W - 1; row++)
+                    updatedEnergies[row][j] = energies[row][j];
+            }
+            else {
+                for (int row = 0; row < seam[j]; row++)
+                    updatedEnergies[row][j] = energies[row][j];
+                for (int row = seam[j] + 1; row < W; row++)
+                    updatedEnergies[row - 1][j] = energies[row][j];
+            }
             updatedI = 0;
         }
         image = updatedImage;
+        energies = updatedEnergies;
         W -= 1;
+
+        for (int j = 0; j < H; j++) {
+            if (seam[j] > 0) energies[seam[j] - 1][j] = computeEnergies(seam[j] - 1, j);
+            if (seam[j] < W - 1) energies[seam[j]][j] = computeEnergies(seam[j], j);
+        }
     }
 
     // compute energies for the whole picture
@@ -204,6 +239,20 @@ public class SeamCarver {
         return Math.sqrt(gradientXsquared + gradientYsquared);
     }
 
+    // recompute energies along seam points
+    private void recomputeEnergy(int x, int y, boolean vertical) {
+        if (vertical) {
+            if ((y > 0) && (y < H - 1)) {
+                energies[x][y - 1] = computeGradientSquared(x, y - 2, x, y + 1);
+                energies[x][y + 1] = computeGradientSquared(x, y - 1, x, y + 2);
+            }
+        }
+        if ((x > 0) && (x < W - 1)) {
+            energies[x - 1][y] = computeGradientSquared(x - 2, y, x + 1, y);
+            energies[x + 1][y] = computeGradientSquared(x - 1, y, x + 1, y);
+        }
+    }
+
     // compute squared gradient for each point
     private double computeGradientSquared(int x, int y, boolean isX) {
         int point1x, point1y, point2x, point2y;
@@ -219,6 +268,11 @@ public class SeamCarver {
             point2x = x;
             point2y = y + 1;
         }
+        return computeGradientSquared(point1x, point1y, point2x, point2y);
+    }
+
+    // compute squared gradient for any two points
+    private double computeGradientSquared(int point1x, int point1y, int point2x, int point2y) {
         int color1 = image.getRGB(point1x, point1y);
         int color2 = image.getRGB(point2x, point2y);
         int r = getRed(color1) - getRed(color2);
@@ -275,5 +329,7 @@ public class SeamCarver {
         minSeam = seam.findVerticalSeam();
         for (int i = 0; i < minSeam.length; i++) System.out.print(minSeam[i] + " ");
         System.out.println();
+        int[] verticalSeam = { 1, 0, 0, 0, 1, 1, 2 };
+        seam.removeVerticalSeam(verticalSeam);
     }
 }
